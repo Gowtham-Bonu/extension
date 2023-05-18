@@ -1,0 +1,620 @@
+require "active_support"                 #required extensions are loaded
+require "active_support/core_ext/hash"   #etxensions for hash are loaded
+require "active_support/core_ext"        #core extensions will be loaded
+require "active_support/all"             #this gives us all the extensions available under active support, but they are not directly added to the memory, instead lazily loaded.
+
+#nil, [], {}, "  ", are considered blank in rails
+# 0  and 0.0  are not blank
+1.present? "result=>" 
+1.blank? "=>" false                         #present? x blank?
+
+1.presence "=>" 1
+[].presence "=>"  nil                        # if the object returns true for present?, then presence retutns the object itself, e;se it returns "nil"
+
+"ssdf".dup "=>" "ssdf"                      # creates duplicate
+"ssdf".duplicable?                      # returns true if the object can be duplicated
+
+first_arr = ["one"]
+second_arr = first_arr.dup
+second_arr.push("two")
+first_arr "=>" ["one"], second_arr "=>" ["one", "two"]
+second_arr.first.gsub!("one", "changed") "=>" ["changed", "two"]
+first_arr "=>" ["changed"]
+#here the first object is being duplicated, so when we change the duplicated array, the first array remains unaltered, but if we are changing the first string inside
+#the second array then it's also changing in the first array, so the object is shallow duplicated when using "dup"
+
+first_arr = ["one"]
+second_arr = first_arr.deep_dup
+second_arr.push("two")
+first_arr "=>" ["one"], second_arr "=>" ["one", "two"]
+second_arr.first.gsub!("one", "changed") "=>" ["changed", "two"]
+first_arr "=>" ["one"]
+# so when using deep_dup the objects within an ibject are also duplicated
+
+a = "dsklcf"
+=> "dsklcf" 
+a.try(:blank?)
+=> false
+
+a = nil
+=> nil 
+a.try(:blank?)
+=> nil
+# so if the object isn't nil then, the method in the option provided to try will be called upon the object else it'll return nil
+
+a= {first_name: 'gowtham', last_name: 'bonu'}
+a.try { " my first name is: #{a[:first_name]} and my last name is: #{a[:last_name]} "}
+# try can also be called without arguements, but we can give a block instead
+
+class Shop
+end
+
+objone = Shop.new
+objone.class_eval do
+  def my_function
+    p "hello"
+  end
+end
+objone.hello "=>" "hello"
+objtwo = Shop.new
+objtwo.my_function "=>" "no method error"
+
+#-------------------------------------------->
+
+class Shop
+end
+
+Shop.class_eval do
+  def my_function
+    p "hello"
+  end
+end
+objone = Shop.new
+objone.hello "=>" "hello"
+objtwo = Shop.new
+objtwo.my_function "=>" "hello"
+#here the class eval is used to execute code in the context of a particular object or in an object's singleton class
+
+class Sentence
+  def acts_like_string?
+  end
+end
+
+sen_obj = Sentence.new
+sen_obj.acts_like? :string "=>" true
+sen_obj.acts_like? :integer "=>" false
+#if any class should act like some other class, then in it's context, 'acts_like_class_name' method must exist, irrespective of the body of ther method and it's return
+#type
+
+class Sentence
+  def acts_like_string?
+      p "i am an integer"
+  end
+end
+
+sen_obj = Sentence.new
+p sen_obj.acts_like? :string "=>" true
+
+"hello gowtham".to_param "=>" "hello gowtham"
+{a: 1, b: 2}.to_param
+ => "a=1&b=2"                              # tO-param gives output as a query string or url parameters
+
+ "hello gowtham".to_query('user')
+ => "user=hello+gowtham"                   # to_query give sreturn value as a key which given as option and value is the return value
+ {a: 1, b: 2}.to_query("user")
+ => "user%5Ba%5D=1&user%5Bb%5D=2" 
+
+ class Author < ApplicationRecord
+  has_many :books, dependent: :destroy
+  has_many :suppliers, dependent: :destroy
+  has_many :followers, dependent: :destroy
+end
+
+class Author < ApplicationRecord
+  with_options :dependent: :destroy do |assoc|
+    assoc.has_many :books
+    assoc.has_many :suppliers
+    assoc.has_many :followers
+  end
+end 
+
+
+class Sentence
+  def initialize(*args)
+      @x, @y = args
+  end
+end
+
+line = Sentence.new(1, 2)
+p line.instance_values "=>"  {"x"=>1, "y"=>2}
+# returns all the insatnce values in hash format, where keys are in string format with '@' removed
+p line.instance_variable_names "=>" ["@x", "@y"]
+
+suppress(ZeroDivisionError) { 1/0 }
+ => nil # suppress takes errors as options and if any of the error is raised during the execution of the block, then the exception will be captured and not raised
+ #it'll be raised
+
+ 2.in? [1, 2, 3] "=>" true
+ 2.in? (1..3) "=>" true # checks the receiver is present in the collection or not and retruns boolean result
+
+class User < ApplicationRecord
+  alias_attribute :login, :email #we can call email field as 'login'
+end
+
+class A
+  attr_internal :logger
+end
+
+class B < A
+  attr_accessor :logger
+end
+# this avoids name conflicts, it names logger variable in A as @_logger
+
+module X
+  module Y
+    module Z
+    end
+  end
+end
+M = X::Y::Z
+
+X::Y::Z.module_parent # => X::Y
+X.module_parent # => Object
+X::Y::Z.module_parent_name # => "X::Y"
+X.module_parent_name # => nil
+X::Y::Z.module_parents # => [X::Y, X, Object]
+X.module_parents #=> [Object]             module parents gives the parents chain till iut reaches object from bottom to top
+
+
+module ModuleOne
+end
+
+ModuleOne.anonymous? #=> false
+Module.new.anonymous? #=> true  returns true for the model which is not defined
+
+class Employee < ApplicationRecord
+  has_one :identity
+  delegate :name, :age, :status, to: :identity
+end
+# with delegate, now instead of calling Employee.identity.name, employee.name
+delegate :name, :age, :status, to: :identity, allow_nil: true
+# will return nil if identity isn't present to the user
+delegate :name, :age, :status, to: :identity, allow_nil: true, prefix: true
+#instead of Employee.name, now after adding prefix true, it's called as Employee.identity_name
+delegate :name, :age, :status, to: :identity, allow_nil: true, prefix: :personal
+#now the identity-name is customized to personal_name
+#the delegate is public byu default and to change the scope to private:
+delegate :name, :age, :status, to: :identity, private: true
+# instead of delegating each field like the above examples, we can delegate all the attributes that were missing in the employee record to the identity record
+
+class A
+  class_attrbute :x
+end
+
+class B < A
+end
+
+class C < B
+end
+
+A.x = true
+B.x "=>" true
+C.x "=>" true
+
+B.x = false
+C.x "=>" false
+A.x "=>" true
+
+class A 
+  cattr_accessor :x
+end
+class A 
+  cattr_accessor :x, default: true
+end
+
+class A
+end
+
+class B < A
+end
+
+class C < B
+end
+
+class D < B
+end
+
+A.subclasses "=>" "[B]"
+B.subclasses "=>" "[D, C]"
+C.subclasses "=>" "[]"
+D.subclasses "=>" "[]"
+
+A.descendants "=>" "[B, D, C]"
+B.descendants "=>" "[D, C]"
+C.descendants "=>" "[]"
+D.descendants "=>" "[]"   #when using descendants the order in which classes are returned are unspecified
+
+"".html_safe? # => false
+s = "".html_safe
+s.html_safe? # => true
+# when we want to insert any string, html_safe? gives boolean based on the safe side of strings, to make a string html_safe method can be used
+#if concatenation is performed on safe string, then the resultant string is also safe, but if any of the string changing methods like: downcase, gsub!, strip... gives
+#unsafe string
+#calling to_s on a safe string returns safe string, but calling to_str returns unsafe string
+first_str = "random" 
+ => "random" 
+first_str.html_safe?
+ => true 
+sec_str = first_str + "added".html_safe
+ => "randomadded" 
+sec_str.html_safe?
+ => true 
+first_str.gsub!('random', 'changed')
+first_str.html_safe? "=>" false
+
+a = "again".html_safe
+=> "again" 
+a.html_safe?
+=> true 
+b = a.to_s
+=> "again" 
+b.html_safe?
+=> true 
+c= a.to_str
+=> "again" 
+c.html_safe?
+=> false
+#calling dup on safe strings give safe strings
+b = a.dup
+ => "again" 
+b.html_safe?
+ => true 
+
+ "Hello World".remove(/Hello /) # => "World"
+ # this removes the occured pattern from the string and returns the remaining part of the string
+ remove! #makes changes in place of the string
+
+ 'hello gowtham           how are you                 '.squish
+ => "hello gowtham how are you"  # here leading, trailing whites are removed and continous spaces are truncated to a single space
+
+ "hello gowtham how are you".truncate(7)
+ => "hell..."  # the string of specified length is returned. Here the ellipsis's length is also considered
+ #ellipsis can be customized with the omissison option
+
+ "hello gowtham how are you".truncate(7, omission: '-')
+ => "hello -" 
+
+ "hello gowtham how are you".truncate(10)
+ => "hello g..." 
+ "hello gowtham how are you".truncate(10, separator: ' ')
+ => "hello..."  # separator is used to give a natural break
+
+ "👍👍👍👍".truncate_bytes(15)
+# => "👍👍👍…"
+# truncation happens w.r.t bytesize
+"👍👍👍👍".truncate_bytes(15, omission: "🖖")
+# => "👍👍🖖"
+
+"hello gowtham how are you".truncate_words(3)
+ => "hello gowtham how..."  #truncates w.r.t the number of words given
+
+ "hell-o gowtham- how ar-e you".truncate_words(3, seperator: '-')
+ => "hell-o gowtham- how..." 
+
+ "gowtham".starts_with('g') "=>" true
+ "gowtham".ends_with('m') "=>" true
+
+ 'gowtham'.at(3)
+ => "t" 
+'gowtham'.at(11)
+ => nil  # if value exists at given index, it is returned else nil is returned
+
+ 'gowtham'.from(3)
+ => "tham" 
+ 'gowtham'.from(10)
+ => nil  #string part from the sepcified index will be returned
+
+ 'gowtham'.to(3)
+ => "gowt" 
+'gowtham'.to(10)
+ => "gowtham"  # upto the given index, the string part willbe returned, if the  index exceeds max index, then total string will be returned
+
+'gowtham'.first(10)
+ => "gowtham" 
+'gowtham'.first(1)
+ => "g" # returns number of characters in a string form starting index and viceversa for last
+
+ 'gowtham'.last(1)
+ => "m" 
+'gowtham'.last(10)
+ => "gowtham" 
+
+ 'cake'.pluralize
+ => "cakes" 
+ #to compose a table name form a model name active record uses pluralize, singularize vs pluralize
+ 'cakes'.singularize
+ => "cake" 
+
+ 'gowtham_bonu'.camelize
+ => "GowthamBonu" # returns in camel case, camelize could be given an optiojnal parameter where the :upper is default, and if lower is given then the first letter 
+ #will be small case
+ 'gowtham_bonu'.camelize(:lower)
+ => "gowthamBonu" 
+# underscore vs camelize
+"GowthamBonu".underscore
+ => "gowtham_bonu" 
+
+ "hello gowtham how are you".titleize
+ => "Hello Gowtham How Are You" 
+
+ "hello_gowtham_how_are_you".dasherize
+ => "hello-gowtham-how-are-you"  #replaces underscores if exists, with dashes
+
+ 'D::E::F'.demodulize
+ => "F"  # gives the right most part
+ 'D::E::F'.deconstantize
+ => "D::E"  #returns the remaing without the right most part
+
+ 'gowtham bonu'.parameterize
+ => "gowtham-bonu" # returns it in a way that it can be used in urls
+
+ 'ActiveUser'.tableize
+ => "active_users"  #underscores and then pluralizes, tabelize vs classify
+
+ "active_users" .classify
+ => "ActiveUser"  #gives class name as string
+
+ a = 'Integer'.constantize
+ => Integer  # here directly the object is returned, else name error will be raised
+
+ 'author_id'.humanize
+ => "Author"  # returns attribute as human readable, humanize
+
+ 'Author'.foreign_key
+ => "author_id" # converts class name to a foreign_key format, association use this method to retrieve column names from association names
+
+ "2010-07-27".to_date              # => Tue, 27 Jul 2010
+"2010-07-27 23:37:00".to_time     # => 2010-07-27 23:37:00 +0200
+"2010-07-27 23:37:00".to_datetime # => Tue, 27 Jul 2010 23:37:00 +0000
+
+:gow.starts_with 'g'
+:gow.ends_with 'w'
+
+2.kilobytes   # => 2048
+3.megabytes   # => 3145728 , one kb = 1024 is used as a conversion factor
+
+1.day.from_now
+ => Fri, 12 May 2023 12:38:02.125525123 UTC +00:00 
+
+ (4.days + 5.weeks).from_now
+ => Mon, 19 Jun 2023 12:38:18.101738883 UTC +00:00 
+
+ 5551234.to_fs(:phone)
+# => 555-1234
+1235551234.to_fs(:phone)
+# => 123-555-1234
+1235551234.to_fs(:phone, delimiter: " ")
+# => 123 555 1234
+7041838286.to_fs(:phone, country_code: 91)
+ => "+91-704-183-8286" 
+ 1234567890.50.to_fs(:currency)      # => $1,234,567,890.50
+ 1234567890.506.to_fs(:currency, precision: 3)  # => $1,234,567,890.506
+
+ 100.to_fs(:percentage)
+# => 100.000%
+100.to_fs(:percentage, precision: 0)
+# => 100%
+
+12345678.to_fs(:delimited)     # => 12,345,678
+
+111.2345.to_fs(:rounded)                     # => 111.235
+111.2345.to_fs(:rounded, precision: 2)       # => 111.23
+
+123.to_fs(:human_size)                  # => 123 Bytes
+1234.to_fs(:human_size)                 # => 1.21 KB
+
+1234567890123.to_fs(:human)     # => "1.23 Trillion"
+
+2.multiple_of?(1) # => true
+1.multiple_of?(2) # => false
+
+1.ordinal    # => "st"
+2.ordinal    # => "nd"
+100.ordinal    # => "th"
+
+1.ordinalize    # => "1st"
+2.ordinalize    # => "2nd"
+100.ordinalize    # => "100th"
+
+(4.months + 5.years).from_now
+ => Mon, 11 Sep 2028 12:44:14.235072299 UTC +00:00 
+
+ [1, 2, 3].sum # => 6
+(1..100).sum  # => 5050
+{a: 1, b: 2, c: 3}.sum   # => [:a, 1, :b, 2, :c, 3]
+[].sum    # => 0
+[1, 2, 3, 4, 5].sum {|n| n * 2 } 
+ => 30  # here sum becomes an iterator if a block is provided and sums up all the returned values
+
+ [1, 2, 3, 4, 5].index_by { |v| "key_#{v}"} 
+ => {"key_1"=>1, "key_2"=>2, "key_3"=>3, "key_4"=>4, "key_5"=>5}  #here the keys are the return values of the block given to index by, index_by vs index_with
+
+ [1, 2, 3, 4, 5].index_with { |v| "key_#{v}"} 
+ => {1=>"key_1", 2=>"key_2", 3=>"key_3", 4=>"key_4", 5=>"key_5"}  # here unlike index_by, the block returns values 
+
+
+User.many? "=>" false # shorthand for User.size > 1
+User.many? { |user| user.status == 'active' } # retutns true if there exists more than one users who are active
+
+(2..6).exclude? 1
+=> true  # opposite for include?
+
+[ 1, 2, 3 ].including(4, 5)      # => [ 1, 2, 3, 4, 5 ], returns new array that is having the passed elements included
+["gow", "tham", "ron", "ak"].excluding ['tham', 'ak']
+ => ["gow", "ron"]  # returns array by removing the given elements from the array
+
+ [{city: "hyd"}, {city: "chennai"}, {city: "vzg"}].pluck(:city)
+ => ["hyd", "chennai", "vzg"]  # returns array consisting values of the given key form the collection
+
+ [{city: "hyd"}, {city: "chennai"}, {city: "vzg"}].pick(:city)
+ => "hyd"   #  extracts the given key from the first element
+
+ [1, 2, 3, 4, 5].to(3)
+ => [1, 2, 3, 4]  # returns values upto specified index
+ [1, 2, 3, 4, 5].from(3)
+ => [4, 5] 
+[1, 2, 3, 4, 5].from(10)
+ => []     # returns the elements from the specified index if the index is greater than the max index, then empty array is returned
+
+ [1, 2, 3, 4, 5].extract! { |n| n%2 == 0 }
+ => [2, 4]    #    removes the elements for which the block returns true and returns them
+
+ a
+ => ["hello", "gowtham", "how", "are", "you"] 
+3.1.0 :323 > a.to_sentence
+ => "hello, gowtham, how, are, and you" 
+
+ users.to_fs(:db)
+ => "1,2"  # to fs simply acts like to_s but if the array contains any objects that responds to id, then it returns their id's
+
+ {a: 1, b: 2}.to_xml
+ => "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<hash>\n  <a type=\"integer\">1</a>\n  <b type=\"integer\">2</b>\n</hash>\n", # returns the xml format of the object, all items
+ # in the receiver must respond to xml, otherwise exception is raised
+
+ Array.wrap(0)    # => [0],    wraps it's arguements in an array unless it's already an array
+
+ [1, 2, 3, 4, 5].in_groups_of(2)
+ => [[1, 2], [3, 4], [5, nil]] , #     splits array into the given sizes and fills them with nil if the elements are'nt available, if we are willing to customize 
+# padding value then we can give that as a second option,
+[1, 2, 3, 4, 5].in_groups_of(2, 0)
+ => [[1, 2], [3, 4], [5, 0]] ,   # if we are not interested in filling up, we can send false as an arguement but it won't use the false for padding
+ [1, 2, 3, 4, 5].in_groups_of(2, false)
+ => [[1, 2], [3, 4], [5]] 
+ [1, 2, 3, 4, 5].in_groups(2)
+ => [[1, 2, 3], [4, 5, nil]]   # divides the whole array into provided number of groups, and it goes with same options as above
+
+ [1, 2, 1, 1, 4, 5].split(1)
+ => [[], [2], [], [4, 5]]     # splits array into sub arrays based on the given seperator, if it exists at first place, last place or if the seperator is repeated multiple times
+ # then empty array is given
+
+ [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].split{ |n| n%2 == 0 }
+ => [[1], [3], [5], [7], [9], []]     # here the separators are those for whcih block returns true
+
+ {a: 1, b: 1}.merge(a: 0, c: 2)
+# => {:a=>0, :b=>1, :c=>2}          so here if we observe the key a is having conflict, and when merged the key in the arguement wins, if we want to do it in the
+#other way:
+{a: 1, b: 1}.reverse_merge(a: 0, c: 2)
+ => {:a=>1, :c=>2, :b=>1}       # for making changes in place we have reverse_merge!, reverse_update is alias for reverse_megre but it dosen't have ! version
+ {a: {c: 1}, b: 1}.merge(a: {d: 2}, c: 2)
+ => {:a=>{:d=>2}, :b=>1, :c=>2} #     for scenarios like this there is deep_merge and when used, it merges even the nested hashes and provides us result like this:
+ {a: {c: 1}, b: 1}.deep_merge(a: {d: 2}, c: 2)
+ => {:a=>{:c=>1, :d=>2}, :b=>1, :c=>2}   # it has deep-merge! version too..
+ {a: {c: 1}, b: 1}.deep_merge(a: {d: 2}, c: 2).stringify_keys
+ => {"a"=>{:c=>1, :d=>2}, "b"=>1, "c"=>2}  # stringify_keys! exists
+ {a: {c: 1}, b: 1}.deep_merge(a: {d: 2}, c: 2).deep_stringify_keys
+ => {"a"=>{"c"=>1, "d"=>2}, "b"=>1, "c"=>2} 
+ {a: {c: 1}, b: 1}.deep_merge(a: {d: 2}, c: 2).symbolize_keys
+ => {:a=>{:c=>1, :d=>2}, :b=>1, :c=>2}   #  symbolize_keys! exists
+ {a: 1, b: 2}.assert_valid_keys(:a, :b)
+ => {:a=>1, :b=>2}          # passes
+ {a: 1, b: 2}.assert_valid_keys(:a)    # arguement error
+ {a: 'one', b: 'two', c: {d: 'three'}}.deep_transform_values{ |value| value.upcase  }
+ => {:a=>"ONE", :b=>"TWO", :c=>{:d=>"THREE"}}  # #  deep_transform_values! exists
+ {a: 'one', b: 'two', c: {d: 'three'}}.slice!(:a, :b)
+ => {:c=>{:d=>"three"}}   # replaces the hash with only the given keys and returns the remaining key value pairs
+ {a: 'one', b: 'two', c: {d: 'three'}}.extract!(:a, :b)
+ => {:a=>"one", :b=>"two"}      # removes the key value pairs and returns them corresponding to the keys given as the arguements
+ {a: 'one', b: 'two', c: {d: 'three'}}.with_indifferent_access["c"]
+ => {"d"=>"three"} 
+ (2..4) === 3
+ => true 
+ (2..4) === (3..4)
+ => true 
+ (2..4) === (1..4)
+ => false   # here the === checks for a value in the receiver range, the arguement can also be a range where the ends of the range given as arguement must be equal t
+ # or less than the receiver range, the same can be checked with can? also:
+ (2..4).include?(3..4)
+ => true 
+
+ (2..4).overlaps?(1..4)
+ => true 
+ (2..4).overlaps?(4..5)
+ => true
+ (2..4).overlaps?(5..)
+ => false 
+
+ d= Date.current
+ => Fri, 12 May 2023 
+d.beginning_of_week
+ => Mon, 08 May 2023 
+d.beginning_of_week(:sunday)
+ => Sun, 07 May 2023 
+d.end_of_week
+ => Sun, 14 May 2023 
+d.end_of_week(:sunday)
+ => Sat, 13 May 2023 
+ d.monday
+ => Mon, 08 May 2023 
+d.sunday
+ => Sun, 14 May 2023 
+ d.next_week
+ => Mon, 15 May 2023 
+d.next_week(:saturday)
+ => Sat, 20 May 2023 
+ d.prev_week
+ => Mon, 01 May 2023 
+d.prev_week(:saturday)
+ => Sat, 06 May 2023 
+ d.beginning_of_month
+ => Mon, 01 May 2023 
+d.end_of_month
+ => Wed, 31 May 2023 
+ d.beginning_of_year
+ => Sun, 01 Jan 2023 
+d.end_of_year
+ => Sun, 31 Dec 2023
+ d.years_ago(10)
+ => Sun, 12 May 2013 
+ d.years_since(10)
+ => Thu, 12 May 2033 
+ d.months_ago(2)
+ => Sun, 12 Mar 2023 
+ d.months_since(2)
+ => Wed, 12 Jul 2023 
+ d.last_month
+ => Wed, 12 Apr 2023 
+d.weeks_ago(2)
+ => Fri, 28 Apr 2023
+ d.advance(years: 1, weeks: 2)
+ => Sun, 26 May 2024
+ d.change(year: 2030)
+ => Sun, 12 May 2030 
+ d + 1.year
+ => Sun, 12 May 2024 
+ d.beginning_of_day
+ => Fri, 12 May 2023 00:00:00.000000000 UTC +00:00 
+d.end_of_day
+ => Fri, 12 May 2023 23:59:59.999999999 UTC +00:00 
+ d = DateTime.now
+ => Fri, 12 May 2023 12:11:51 +0530 
+d.beginning_of_hour
+ => Fri, 12 May 2023 12:00:00 +0530 
+d.end_of_hour
+ => Fri, 12 May 2023 12:59:59 +0530 
+ d.beginning_of_minute
+ => Fri, 12 May 2023 12:11:00 +0530 
+d.end_of_minute
+ => Fri, 12 May 2023 12:11:59 +0530 
+ d= Date.today
+ => Fri, 12 May 2023 
+d.ago(1)
+ => Thu, 11 May 2023 23:59:59.000000000 UTC +00:00 
+ d.since(1)
+ => Fri, 12 May 2023 00:00:01.000000000 UTC +00:00 
+ d.seconds_since_midnight
+ => 24350 
+ t = Time.now
+ => 2023-05-12 12:24:45.082894338 +0530 
+t.all_day
+ => 2023-05-12 00:00:00 +0530..2023-05-12 23:59:59.999999999 +0530 
+ 
